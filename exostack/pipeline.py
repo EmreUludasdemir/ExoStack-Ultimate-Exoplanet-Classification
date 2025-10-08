@@ -232,6 +232,155 @@ def _engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     return engineered
 
 
+def _get_first_value(df: pd.DataFrame, column: str, default: float | int | bool | None = np.nan):
+    """Safely extract the first value from a dataframe column."""
+
+    if column not in df.columns:
+        return default
+
+    series = df[column]
+    if series.empty:
+        return default
+
+    value = series.iloc[0]
+    if pd.isna(value):
+        return default
+
+    return value
+
+
+def _build_prediction_interpretation(
+    params: Dict[str, float],
+    classification: str,
+    probabilities: Tuple[float, float],
+    derived: Dict[str, float | int | bool | None],
+) -> str:
+    """Create a human-readable interpretation mirroring the original notebook."""
+
+    orbital_period = params["koi_period"]
+    transit_duration = params["koi_duration"]
+    transit_depth = params["koi_depth"]
+    planet_radius = params["koi_prad"]
+    equilibrium_temp = params["koi_teq"]
+    insolation_flux = params["koi_insol"]
+    stellar_temp = params["koi_steff"]
+    stellar_radius = params["koi_srad"]
+    stellar_mass = params["koi_smass"]
+    model_snr = params["koi_model_snr"]
+
+    non_confirmed_prob, confirmed_prob = probabilities
+    confidence = max(probabilities) * 100
+
+    lines: List[str] = []
+    lines.append("=" * 70)
+    lines.append("🔮 EXOPLANET PREDICTION RESULT")
+    lines.append("=" * 70)
+    lines.append("")
+
+    if classification == "CONFIRMED EXOPLANET":
+        lines.append("✅ CLASSIFICATION: CONFIRMED EXOPLANET")
+        lines.append(f"🎯 Confidence: {confidence:.2f}%")
+        lines.append(f"📊 Confirmation Probability: {confirmed_prob * 100:.2f}%")
+        lines.append("")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("🌟 ANALYSIS:")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("")
+
+        lines.append("🔄 ORBITAL CHARACTERISTICS:")
+        if orbital_period < 1:
+            lines.append("   • Ultra-short period planet (< 1 day)")
+            lines.append("   • Extremely hot conditions")
+        elif orbital_period < 10:
+            lines.append("   • Short period planet - very close to star")
+            lines.append("   • Hot Jupiter candidate")
+        elif orbital_period < 100:
+            lines.append("   • Moderate orbital period")
+        else:
+            lines.append("   • Long orbital period")
+            lines.append("   • Distant from host star")
+        lines.append(f"   • Period: {orbital_period:.2f} days")
+        lines.append(f"   • Transit Duration: {transit_duration:.2f} hours")
+        lines.append("")
+
+        lines.append("🪐 PLANET CHARACTERISTICS:")
+        if planet_radius < 1.25:
+            lines.append("   • Earth-sized planet (terrestrial)")
+            lines.append("   • Likely rocky composition")
+        elif planet_radius < 2:
+            lines.append("   • Super-Earth")
+            lines.append("   • Thick atmosphere possible")
+        elif planet_radius < 4:
+            lines.append("   • Mini-Neptune")
+        elif planet_radius < 10:
+            lines.append("   • Neptune-sized planet")
+        else:
+            lines.append("   • Gas giant (Jupiter-like)")
+        lines.append(f"   • Radius: {planet_radius:.2f} Earth radii")
+        lines.append(f"   • Transit Depth: {transit_depth:.0f} ppm")
+        lines.append("")
+
+        lines.append("🌍 HABITABILITY ASSESSMENT:")
+        if bool(derived.get("in_habitable_zone", False)):
+            lines.append("   ⭐ Located in the habitable zone!")
+            lines.append("   • Temperature range allows liquid water")
+        else:
+            lines.append("   • Outside habitable zone")
+            if insolation_flux > 2:
+                lines.append("   • Likely too hot for liquid water")
+            else:
+                lines.append("   • Likely too cold for liquid water")
+        celsius = equilibrium_temp - 273.15
+        lines.append(f"   • Equilibrium Temp: {equilibrium_temp:.0f} K ({celsius:.0f}°C)")
+        lines.append(f"   • Insolation Flux: {insolation_flux:.2f} Earth flux")
+        lines.append("")
+
+        lines.append("📡 SIGNAL QUALITY:")
+        if bool(derived.get("high_signal", False)):
+            lines.append("   ✅ High signal-to-noise ratio")
+            lines.append("   ✅ Strong detection confidence")
+        else:
+            lines.append("   ⚠️ Moderate signal-to-noise ratio")
+            lines.append("   • Additional observations recommended")
+        lines.append(f"   • Model SNR: {model_snr:.1f}")
+        lines.append("")
+
+        lines.append("⭐ HOST STAR PROPERTIES:")
+        if stellar_temp > 7000:
+            lines.append("   • Hot A-type star")
+        elif stellar_temp > 6000:
+            lines.append("   • F-type star (hotter than Sun)")
+        elif stellar_temp > 5000:
+            lines.append("   • G-type star (Sun-like)")
+        else:
+            lines.append("   • K/M-type star (cooler red dwarf)")
+        lines.append(f"   • Stellar Temp: {stellar_temp:.0f} K")
+        lines.append(f"   • Stellar Radius: {stellar_radius:.2f} Solar radii")
+        lines.append(f"   • Stellar Mass: {stellar_mass:.2f} Solar masses")
+    else:
+        lines.append("❌ CLASSIFICATION: NOT CONFIRMED")
+        lines.append(f"🎯 Confidence: {confidence:.2f}%")
+        lines.append(f"📊 Non-Confirmation Probability: {non_confirmed_prob * 100:.2f}%")
+        lines.append("")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("⚠️ ASSESSMENT:")
+        lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        lines.append("")
+        lines.append("This object is likely:")
+        lines.append("   • False positive due to stellar activity")
+        lines.append("   • Eclipsing binary system")
+        lines.append("   • Background eclipsing binary")
+        lines.append("   • Instrumental artifact")
+        lines.append("   • Candidate requiring further verification")
+        lines.append("")
+        lines.append("RECOMMENDATION: Additional observations needed")
+
+    lines.append("")
+    lines.append("=" * 70)
+
+    return "\n".join(lines)
+
+
 def _prepare_feature_matrix(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     engineered = _engineer_features(df)
     engineered = engineered.replace([np.inf, -np.inf], np.nan)
@@ -493,8 +642,14 @@ def predict_exoplanet_ultimate(
     impact_param: float = 0.5,
     model_snr: float = 10.0,
     planet_number: float = 1.0,
-) -> Dict[str, float]:
-    """Predict whether a candidate is a confirmed exoplanet."""
+    detailed: bool = False,
+) -> Dict[str, float | Dict[str, float | int | bool | None] | str]:
+    """Predict whether a candidate is a confirmed exoplanet.
+
+    When ``detailed`` is set to ``True`` the function mirrors the
+    notebook-style output by returning engineered features and a formatted
+    interpretation block in addition to the raw probabilities.
+    """
 
     params = {
         "koi_period": orbital_period,
@@ -516,7 +671,9 @@ def predict_exoplanet_ultimate(
     engineered_candidate = _engineer_features(candidate_df)
     engineered_candidate = engineered_candidate.replace([np.inf, -np.inf], np.nan)
 
-    candidate_aligned = engineered_candidate.reindex(columns=artifacts.feature_columns, fill_value=np.nan)
+    candidate_aligned = engineered_candidate.reindex(
+        columns=artifacts.feature_columns, fill_value=np.nan
+    )
     candidate_imputed = artifacts.imputer.transform(candidate_aligned)
     candidate_selected = artifacts.selector.transform(candidate_imputed)
     candidate_scaled = artifacts.scaler.transform(candidate_selected)
@@ -524,8 +681,44 @@ def predict_exoplanet_ultimate(
     probabilities = artifacts.stacking_model.predict_proba(candidate_scaled)[0]
     predicted_class = int(probabilities[1] >= probabilities[0])
 
-    return {
-        "classification": "CONFIRMED EXOPLANET" if predicted_class == 1 else "NOT CONFIRMED",
+    classification = "CONFIRMED EXOPLANET" if predicted_class == 1 else "NOT CONFIRMED"
+    result: Dict[str, float | Dict[str, float | int | bool | None] | str] = {
+        "classification": classification,
         "confirmed_probability": float(probabilities[1]),
         "non_confirmed_probability": float(probabilities[0]),
+        "confidence": float(max(probabilities)),
     }
+
+    if detailed:
+        derived_features = {
+            "planet_star_radius_ratio": float(
+                _get_first_value(engineered_candidate, "planet_star_radius_ratio", np.nan)
+            ),
+            "transit_duration_ratio": float(
+                _get_first_value(engineered_candidate, "transit_duration_ratio", np.nan)
+            ),
+            "transit_signal_strength": float(
+                _get_first_value(engineered_candidate, "transit_signal_strength", np.nan)
+            ),
+            "in_habitable_zone": bool(
+                int(_get_first_value(engineered_candidate, "habitable_zone", 0)) == 1
+            ),
+            "high_signal": bool(int(_get_first_value(engineered_candidate, "high_snr", 0)) == 1),
+        }
+
+        interpretation = _build_prediction_interpretation(
+            params,
+            classification,
+            (probabilities[0], probabilities[1]),
+            derived_features,
+        )
+
+        result.update(
+            {
+                "parameters": params,
+                "derived_features": derived_features,
+                "interpretation": interpretation,
+            }
+        )
+
+    return result
