@@ -1,145 +1,96 @@
-ExoStack: Ultimate Exoplanet Classification & Habitability Prediction
+# ExoStack: Ultimate Exoplanet Classification
 
-ExoStack — a NASA-based machine learning system that predicts exoplanet types and habitability potential using advanced feature engineering, optimized models, and an ensemble stacking architecture.
+ExoStack is a modular Python implementation of the "ultra advanced" exoplanet
+classification workflow shared in the original notebook-style script.  The code
+has been restructured into reusable functions that can be executed easily inside
+Google Colab or any local Python environment.
 
-<p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Exoplanet_Comparison_Kepler-20.jpg" width="700"/> </p>
-🚀 Features
-🎯 1. Advanced Feature Engineering
+## 🚀 Google Colab Quickstart
 
-Over 20 domain-specific engineered features for precise star–planet interaction modeling.
+```python
+# 1. Install the scientific stack (run in a fresh Colab cell)
+!pip install -q pandas numpy scikit-learn matplotlib seaborn
+!pip install -q imbalanced-learn xgboost lightgbm catboost
 
-Category	Example Features
-Ratios & Geometry	planet_star_radius_ratio, radius_ratio_squared, depth_radius_consistency
-Transit & Light Curve	transit_duration_ratio_log, transit_signal_log, central_transit
-Physical Properties	stellar_density, temp_diff, period_category
-Signal Quality	snr_log, high_snr (binary)
-🤖 2. Hyperparameter-Optimized Models
+# 2. Clone the repository
+!git clone https://github.com/<your-account>/ExoStack-Ultimate-Exoplanet-Classification.git
+%cd ExoStack-Ultimate-Exoplanet-Classification
 
-Each model is tuned with SMOTEENN balancing for class accuracy and generalization.
+# 3. Run the full training workflow with notebook-style logs
+from exostack import run_colab_workflow
+results = run_colab_workflow()
+```
 
-LightGBM – 500 estimators, depth=12
+The helper returns a `TrainingResults` dataclass containing trained estimators,
+metrics, and metadata.  A serialized model bundle is written to
+`exostack_detector.pkl` for later reuse.
 
-XGBoost – Optimized hyperparameters
+## 🧰 Core Modules
 
-CatBoost – Newly added
+| Module | Description |
+| --- | --- |
+| `exostack.pipeline` | Preprocessing, feature engineering, model training, and prediction helpers. |
+| `exostack.colab_workflow` | End-to-end runner that mirrors the verbose output of the original notebook. |
+| `exostack.__init__` | Convenience imports for the public API. |
 
-Random Forest – 600 trees
+### Key Functions
 
-Extra Trees – 600 trees
+- `load_kepler_cumulative_table(url)` – Downloads the Kepler cumulative table
+  from NASA.
+- `train_ultimate_model(df)` – Trains the SMOTEENN-balanced ensemble, returning
+  a `TrainingResults` object with metrics and fitted estimators.
+- `predict_exoplanet_ultimate(artifacts, ..., detailed=True)` – Predicts whether
+  a candidate is a confirmed exoplanet.  When `detailed=True` it also returns an
+  interpretation block similar to the notebook output.
+- `run_colab_workflow()` – Executes the entire pipeline, prints progress,
+  showcases example predictions, and stores the serialized package.
 
-Gradient Boosting – 400 estimators
+## 📦 Saved Package Contents
 
-<p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Machine_learning_diagram_en.svg" width="600"/> </p>
-🧠 3. Ultimate Stacking Ensemble
+`run_colab_workflow()` generates a `pickle` file that stores:
 
-Combines the top 4 models using a LightGBM meta-learner and 10-fold cross-validation for robust generalization.
+- Serialized preprocessing artifacts (imputer, feature selector, scaler).
+- The stacking ensemble alongside the top-performing base models.
+- Cross-validation metrics for every model.
+- Train/test class distributions and the selected feature names.
 
-<p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/b/b9/Stacking_generalization.png" width="500"/> </p>
-🔭 4. Intelligent Prediction Function
-from exostack import predict_exoplanet_ultimate
+## 🧪 Example: Manual Usage
 
-result = predict_exoplanet_ultimate(input_data)
-print(result)
+```python
+from exostack import (
+    load_kepler_cumulative_table,
+    train_ultimate_model,
+    predict_exoplanet_ultimate,
+)
 
+url = "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&format=csv"
+df = load_kepler_cumulative_table(url)
+results = train_ultimate_model(df)
 
-Generates not only predictions, but also scientific diagnostics:
+prediction = predict_exoplanet_ultimate(
+    results.artifacts,
+    orbital_period=3.5,
+    transit_duration=4.0,
+    transit_depth=15000.0,
+    planet_radius=11.2,
+    equilibrium_temp=1500.0,
+    insolation_flux=150.0,
+    stellar_temp=6000.0,
+    stellar_radius=1.2,
+    stellar_mass=1.1,
+    model_snr=45.0,
+    detailed=True,
+)
 
-🔬 Scientific Analysis
+print(prediction["interpretation"])
+```
 
-🌍 Habitability Assessment
+## 📚 Scientific References
 
-🪐 Planet Type Classification
+- Luz et al., 2024 – Ensemble-based exoplanet classification (Electronics).
+- Malik et al., 2022 – Advanced feature engineering for Kepler/TESS candidates
+  (MNRAS).
 
-🌟 Star Feature Analysis
+## 🪐 License
 
-📈 SNR Quality Control
-
-🧩 5. Example Scenarios
-Type	Description
-🌍 Earth-like	Balanced temperature, habitable zone
-🔥 Hot Jupiter	Massive gas giant with short orbit
-🌏 Super-Earth	Rocky, potentially habitable planet
-💙 Mini-Neptune	Medium density, water-rich atmosphere
-<p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Exoplanet_illustration.jpg" width="650"/> </p>
-📊 Performance
-
-Expected Accuracy: 85% – 95%
-
-Why So Powerful?
-
-✅ NASA-verified dataset
-✅ 20+ astrophysical engineered features
-✅ SMOTEENN data balancing
-✅ Hyperparameter optimization
-✅ Mutual info feature selection
-✅ Multi-model ensemble learning
-
-<p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/2/23/Confusion_matrix_diagram.svg" width="450"/> </p>
-🧪 Usage
-from exostack import predict_exoplanet_ultimate
-
-result = predict_exoplanet_ultimate(input_data)
-print(result)
-
-
-Output Includes:
-
-Planet type
-
-Habitability score
-
-Prediction confidence
-
-Model contribution analysis
-
-📁 Project Structure
-exostack/
-│
-├── models/
-│   ├── lightgbm.pkl
-│   ├── xgboost.pkl
-│   ├── catboost.pkl
-│   ├── random_forest.pkl
-│   ├── extra_trees.pkl
-│   ├── gradient_boost.pkl
-│   └── ensemble.pkl
-│
-├── scaler.pkl
-├── selector.pkl
-├── metadata.json
-└── README.md
-
-🧬 Scientific Sources
-
-NASA Exoplanet Archive
-
-Kepler Mission Data
-
-“Feature Engineering for Exoplanet Detection”, ApJ 2023
-
-🧑‍💻 Contributing
-
-Fork the repository
-
-Create your feature branch (feature/*)
-
-Commit your changes
-
-Submit a pull request
-
-You’ll be listed in the Contributors section 🌟
-
-🪐 License
-
-MIT License — free for open-source use and distribution.
-
-🌟 Author
-
-Emre Uludaşdemir
-AstroData Scientist | Machine Learning Engineer
-📧 uludasdemire@mef.edu.tr
-
-🌐 LinkedIn
- | GitHub
-
-<p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/d/dc/Kepler_space_telescope_artwork.jpg" width="500"/> </p>
+[MIT](LICENSE)
