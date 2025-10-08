@@ -36,11 +36,33 @@ Combines the top 4 models using a LightGBM meta-learner and 10-fold cross-valida
 
 <p align="center"> <img src="https://upload.wikimedia.org/wikipedia/commons/b/b9/Stacking_generalization.png" width="500"/> </p>
 🔭 4. Intelligent Prediction Function
-from exostack import predict_exoplanet_ultimate
+```python
+from exostack import (
+    load_kepler_cumulative_table,
+    predict_exoplanet_ultimate,
+    train_ultimate_model,
+)
 
-result = predict_exoplanet_ultimate(input_data)
-print(result)
+kepler_df = load_kepler_cumulative_table(
+    "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=cumulative&format=csv"
+)
 
+results = train_ultimate_model(kepler_df)
+prediction = predict_exoplanet_ultimate(
+    results.artifacts,
+    orbital_period=365.25,
+    transit_duration=13.0,
+    transit_depth=84.0,
+    planet_radius=1.0,
+    equilibrium_temp=288,
+    insolation_flux=1.0,
+    stellar_temp=5778,
+    stellar_radius=1.0,
+    model_snr=25.0,
+)
+
+print(prediction)
+```
 
 Generates not only predictions, but also scientific diagnostics:
 
